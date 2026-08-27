@@ -6,8 +6,10 @@ local poll_interval = 500
 local guard_owns_mute = false
 local outage_active = false
 local outage_source_uuid = nil
-local last_availability = nil
 local missing_source_logged = false
+local availability_warning_logged = false
+local startup_checks_remaining = 0
+local startup_grace_period_ms = 3000
 local release_guard_ownership
 
 local pipewire_workaround = [[stream.rules = [
@@ -72,8 +74,6 @@ local function ensure_pipewire_workaround()
         local contents = existing:read("*a")
         existing:close()
         if contents ~= nil and has_pipewire_workaround(contents) then
-            obs.script_log(obs.LOG_INFO,
-                "PipeWire OBS movable-capture workaround is already installed")
             return
         end
         obs.script_log(obs.LOG_WARNING,
@@ -114,13 +114,10 @@ local function ensure_pipewire_workaround()
         return
     end
 
-    obs.script_log(obs.LOG_INFO, "Installed PipeWire OBS movable-capture workaround")
     result, exit_type, exit_code = os.execute(
         "timeout --signal=KILL 5s systemctl --user restart pipewire-pulse.service " ..
             ">/dev/null 2>&1")
-    if command_succeeded(result, exit_type, exit_code) then
-        obs.script_log(obs.LOG_INFO, "Restarted pipewire-pulse to apply the workaround")
-    else
+    if not command_succeeded(result, exit_type, exit_code) then
         obs.script_log(obs.LOG_WARNING,
             "Workaround installed, but pipewire-pulse could not be restarted; " ..
                 "it will apply after the next restart")
@@ -134,21 +131,18 @@ local function probe_source(source_name)
     return command_succeeded(result, exit_type, exit_code)
 end
 
-local function handle_availability(available)
-    if last_availability ~= available then
-        if available then
-            obs.script_log(obs.LOG_INFO,
-                "EasyEffects source is available; OBS microphone guard released")
-        else
-            obs.script_log(obs.LOG_WARNING,
-                "EasyEffects source is unavailable; muting the protected OBS source")
-        end
-        last_availability = available
+local function handle_availability(available, suppress_startup_warning)
+    if available then
+        availability_warning_logged = false
+    elseif not suppress_startup_warning and not availability_warning_logged then
+        obs.script_log(obs.LOG_WARNING,
+            "EasyEffects source is unavailable; muting the protected OBS source")
+        availability_warning_logged = true
     end
 
     local source = obs.obs_get_source_by_name(protected_source_name)
     if source == nil then
-        if not missing_source_logged then
+        if not suppress_startup_warning and not missing_source_logged then
             obs.script_log(obs.LOG_WARNING,
                 "Protected OBS source not found: " .. protected_source_name)
             missing_source_logged = true
@@ -185,7 +179,11 @@ local function handle_availability(available)
 end
 
 local function check_now()
-    handle_availability(probe_source(easyeffects_source_name))
+    local suppress_startup_warning = startup_checks_remaining > 0
+    if suppress_startup_warning then
+        startup_checks_remaining = startup_checks_remaining - 1
+    end
+    handle_availability(probe_source(easyeffects_source_name), suppress_startup_warning)
 end
 
 release_guard_ownership = function()
@@ -269,6 +267,7 @@ function script_update(settings)
         poll_interval = math.max(100, math.min(5000, configured_interval))
     end
 
+    startup_checks_remaining = math.max(1, math.ceil(startup_grace_period_ms / poll_interval))
     check_now()
     obs.timer_add(check_now, poll_interval)
 end

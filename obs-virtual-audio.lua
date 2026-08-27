@@ -42,14 +42,6 @@ local linked_device = ""
 local bootstrap_done = false
 
 
--- ----------------------------------------------------------------------------
--- Logging
--- ----------------------------------------------------------------------------
-
-local function log_info(message)
-    obs.script_log(obs.LOG_INFO, "[PipeWire Audio Router] " .. message)
-end
-
 local function log_warn(message)
     obs.script_log(obs.LOG_WARNING, "[PipeWire Audio Router] " .. message)
 end
@@ -155,7 +147,6 @@ local function ensure_config_file()
     end
 
     if file_exists(path) then
-        log_info("PipeWire config already exists; leaving it unchanged: " .. path)
         return true
     end
 
@@ -173,7 +164,6 @@ local function ensure_config_file()
     file:write(PIPEWIRE_CONFIG)
     file:close()
 
-    log_info("Created persistent PipeWire config: " .. path)
     return true
 end
 
@@ -225,7 +215,6 @@ local function ensure_virtual_devices()
             return false
         end
 
-        log_info("Loaded current-session virtual sink: " .. VIRTUAL_SINK)
     end
 
     local mic_ok = pactl_has_named_device("sources", VIRTUAL_MIC)
@@ -244,7 +233,6 @@ local function ensure_virtual_devices()
             return false
         end
 
-        log_info("Loaded current-session virtual mic: " .. VIRTUAL_MIC)
     end
 
     return true
@@ -335,12 +323,7 @@ local function set_obs_monitoring_device_from_checkbox()
     -- internally when the device ID changes.
     local ok = obs.obs_set_audio_monitoring_device(target_name, target_id)
 
-    if ok then
-        log_info(
-            "OBS Monitoring Device set to: " ..
-            target_name .. " [" .. target_id .. "]"
-        )
-    else
+    if not ok then
         log_warn(
             "OBS refused to set Monitoring Device to: " ..
             target_name .. " [" .. target_id .. "]"
@@ -539,10 +522,6 @@ local function connect_to_device(device)
     end
 
     linked_device = device
-
-    log_info(
-        "Listening to processed OBS output through: " .. device
-    )
 
     return true
 end
