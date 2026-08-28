@@ -42,6 +42,10 @@ local linked_device = ""
 local bootstrap_done = false
 
 
+local function log_info(message)
+    obs.script_log(obs.LOG_INFO, "[PipeWire Audio Router] " .. message)
+end
+
 local function log_warn(message)
     obs.script_log(obs.LOG_WARNING, "[PipeWire Audio Router] " .. message)
 end
@@ -492,7 +496,7 @@ local function connect_to_device(device)
     end
 
     if not playback_node_exists(device) then
-        log_warn("Playback device is unavailable: " .. tostring(device))
+        log_info("Playback device is unavailable: " .. tostring(device))
         return false
     end
 
