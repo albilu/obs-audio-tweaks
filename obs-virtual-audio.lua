@@ -43,15 +43,15 @@ local bootstrap_done = false
 
 
 local function log_info(message)
-    obs.script_log(obs.LOG_INFO, "[PipeWire Audio Router] " .. message)
+    obs.blog(obs.LOG_INFO, "[PipeWire Audio Router] " .. message)
 end
 
 local function log_warn(message)
-    obs.script_log(obs.LOG_WARNING, "[PipeWire Audio Router] " .. message)
+    obs.blog(obs.LOG_WARNING, "[PipeWire Audio Router] " .. message)
 end
 
 local function log_error(message)
-    obs.script_log(obs.LOG_ERROR, "[PipeWire Audio Router] " .. message)
+    obs.blog(obs.LOG_ERROR, "[PipeWire Audio Router] " .. message)
 end
 
 

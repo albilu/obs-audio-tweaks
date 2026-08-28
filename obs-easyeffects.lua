@@ -62,7 +62,7 @@ end
 local function ensure_pipewire_workaround()
     local home = os.getenv("HOME")
     if home == nil or home == "" then
-        obs.script_log(obs.LOG_ERROR,
+        obs.blog(obs.LOG_ERROR,
             "Cannot install the PipeWire workaround because HOME is unavailable")
         return
     end
@@ -76,14 +76,14 @@ local function ensure_pipewire_workaround()
         if contents ~= nil and has_pipewire_workaround(contents) then
             return
         end
-        obs.script_log(obs.LOG_WARNING,
+        obs.blog(obs.LOG_WARNING,
             "PipeWire workaround file is incomplete; replacing it: " .. config_path)
     end
 
     local result, exit_type, exit_code = os.execute(
         "mkdir -p -- " .. shell_quote(config_dir) .. " >/dev/null 2>&1")
     if not command_succeeded(result, exit_type, exit_code) then
-        obs.script_log(obs.LOG_ERROR,
+        obs.blog(obs.LOG_ERROR,
             "Could not create the PipeWire configuration directory: " .. config_dir)
         return
     end
@@ -91,7 +91,7 @@ local function ensure_pipewire_workaround()
     local temporary_path = config_path .. ".tmp"
     local output, open_error = io.open(temporary_path, "w")
     if output == nil then
-        obs.script_log(obs.LOG_ERROR,
+        obs.blog(obs.LOG_ERROR,
             "Could not write the PipeWire workaround: " .. tostring(open_error))
         return
     end
@@ -100,7 +100,7 @@ local function ensure_pipewire_workaround()
     local closed, close_error = output:close()
     if wrote == nil or closed == nil then
         os.remove(temporary_path)
-        obs.script_log(obs.LOG_ERROR,
+        obs.blog(obs.LOG_ERROR,
             "Could not write the PipeWire workaround: " ..
                 tostring(write_error or close_error))
         return
@@ -109,7 +109,7 @@ local function ensure_pipewire_workaround()
     local renamed, rename_error = os.rename(temporary_path, config_path)
     if not renamed then
         os.remove(temporary_path)
-        obs.script_log(obs.LOG_ERROR,
+        obs.blog(obs.LOG_ERROR,
             "Could not install the PipeWire workaround: " .. tostring(rename_error))
         return
     end
@@ -118,7 +118,7 @@ local function ensure_pipewire_workaround()
         "timeout --signal=KILL 5s systemctl --user restart pipewire-pulse.service " ..
             ">/dev/null 2>&1")
     if not command_succeeded(result, exit_type, exit_code) then
-        obs.script_log(obs.LOG_WARNING,
+        obs.blog(obs.LOG_WARNING,
             "Workaround installed, but pipewire-pulse could not be restarted; " ..
                 "it will apply after the next restart")
     end
@@ -135,7 +135,7 @@ local function handle_availability(available, suppress_startup_warning)
     if available then
         availability_warning_logged = false
     elseif not suppress_startup_warning and not availability_warning_logged then
-        obs.script_log(obs.LOG_WARNING,
+        obs.blog(obs.LOG_WARNING,
             "EasyEffects source is unavailable; muting the protected OBS source")
         availability_warning_logged = true
     end
@@ -143,7 +143,7 @@ local function handle_availability(available, suppress_startup_warning)
     local source = obs.obs_get_source_by_name(protected_source_name)
     if source == nil then
         if not suppress_startup_warning and not missing_source_logged then
-            obs.script_log(obs.LOG_WARNING,
+            obs.blog(obs.LOG_WARNING,
                 "Protected OBS source not found: " .. protected_source_name)
             missing_source_logged = true
         end
